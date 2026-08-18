@@ -1,31 +1,49 @@
-const RAW_API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050';
-const API_BASE_URL = RAW_API_URL.replace(/\/+$/, '');
+const PROD_API_URL = 'https://expiry-date-express-server-ej5t.onrender.com';
+const DEV_API_URL = 'http://localhost:5050';
+
+const getBaseUrl = () => {
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, '');
+  }
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return PROD_API_URL;
+  }
+  return DEV_API_URL;
+};
+
+const API_BASE_URL = getBaseUrl();
 
 /**
  * Register a new user
  * @param {Object} data - { name, email, password }
  */
 export async function registerUser({ name, email, password }) {
-  const response = await fetch(`${API_BASE_URL}/auth/register`, {
-    method: 'POST',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ name, email, password }),
-  });
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ name, email, password }),
+    });
 
-  const resData = await response.json();
+    const resData = await response.json().catch(() => ({}));
 
-  if (!response.ok) {
-    const errorMsg =
-      resData.message ||
-      (resData.errors && resData.errors.map((err) => err.msg).join(', ')) ||
-      'Registration failed. Please try again.';
-    throw new Error(errorMsg);
+    if (!response.ok) {
+      const errorMsg =
+        resData.message ||
+        (resData.errors && resData.errors.map((err) => err.msg).join(', ')) ||
+        'Registration failed. Please check your credentials.';
+      throw new Error(errorMsg);
+    }
+
+    return resData;
+  } catch (err) {
+    if (err.name === 'TypeError' && err.message.includes('fetch')) {
+      throw new Error(`Unable to connect to backend server (${API_BASE_URL}). If using Render free tier, it may be waking up (takes ~30s). Please retry.`);
+    }
+    throw err;
   }
-
-  return resData;
 }
 
 /**
@@ -33,26 +51,32 @@ export async function registerUser({ name, email, password }) {
  * @param {Object} data - { email, password }
  */
 export async function loginUser({ email, password }) {
-  const response = await fetch(`${API_BASE_URL}/auth/login`, {
-    method: 'POST',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ email, password }),
-  });
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password }),
+    });
 
-  const resData = await response.json();
+    const resData = await response.json().catch(() => ({}));
 
-  if (!response.ok) {
-    const errorMsg =
-      resData.message ||
-      (resData.errors && resData.errors.map((err) => err.msg).join(', ')) ||
-      'Login failed. Invalid credentials.';
-    throw new Error(errorMsg);
+    if (!response.ok) {
+      const errorMsg =
+        resData.message ||
+        (resData.errors && resData.errors.map((err) => err.msg).join(', ')) ||
+        'Login failed. Invalid credentials.';
+      throw new Error(errorMsg);
+    }
+
+    return resData;
+  } catch (err) {
+    if (err.name === 'TypeError' && err.message.includes('fetch')) {
+      throw new Error(`Unable to connect to backend server (${API_BASE_URL}). If using Render free tier, it may be waking up (takes ~30s). Please retry.`);
+    }
+    throw err;
   }
-
-  return resData;
 }
 
 /**
